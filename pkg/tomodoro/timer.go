@@ -29,7 +29,7 @@ type StopTimerResponse struct {
 }
 
 func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64, name string) (*Timer, error) {
-	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug, URLTimerSlug, URLStartTimerSlug)
+	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug, URLTimerSlug, URLStartTimerSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64
 }
 
 func (c *Client) StopTimer(ctx context.Context, teamSlug string) (*StopTimerResponse, error) {
-	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug, URLTimerSlug)
+	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug, URLTimerSlug)
 	if err != nil {
 		return nil, err
 	}

@@ -31,7 +31,7 @@ type Link struct {
 }
 
 func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
-	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug)
+	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
 }
 
 func (c *Client) CreateTeam(ctx context.Context, teamName string) (*CreateTeamResponse, error) {
-	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug)
+	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug)
 	if err != nil {
 		return nil, err
 	}

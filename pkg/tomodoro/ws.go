@@ -3,30 +3,12 @@ package tomodoro
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"net/url"
 	"sync"
 	"time"
 )
-
-type MessageType string
-
-const (
-	Tick         MessageType = "tick"
-	TimerStopped MessageType = "timerStopped"
-	TimerStarted MessageType = "timerStarted"
-)
-
-type Message struct {
-	Type    MessageType `json:"type"`
-	Payload struct {
-		Name          string `json:"name"`
-		RemainingTime int64  `json:"remainingTime"`
-		Team          string `json:"team"`
-		Timestamp     int64  `json:"timestamp"`
-	} `json:"payload"`
-}
 
 const pingPeriod = 10 * time.Second
 const tickPeriod = 1 * time.Second
@@ -35,27 +17,33 @@ type WebSocketClient struct {
 	configStr string
 	ctx       context.Context
 	ctxCancel context.CancelFunc
-
-	mu     sync.RWMutex
-	wsconn *websocket.Conn
+	mu        sync.RWMutex
+	conn      *websocket.Conn
+	OutChan   chan Message
 }
 
-func NewWebSocketClient(address string) (*WebSocketClient, error) {
-	c := WebSocketClient{}
+func NewWebSocketClient(teamSlug string) *WebSocketClient {
+	wsc := WebSocketClient{}
 
-	c.ctx, c.ctxCancel = context.WithCancel(context.Background())
-	c.configStr = address
+	wsc.configStr, _ = url.JoinPath(BaseWSURLV1, URLTeamSlug, teamSlug, "ws")
 
-	go c.listen()
-	go c.ping()
-	return &c, nil
+	wsc.ctx, wsc.ctxCancel = context.WithCancel(context.Background())
+
+	wsc.OutChan = make(chan Message, 100)
+
+	return &wsc
 }
 
-func (wsc *WebSocketClient) Connect() (*websocket.Conn, error) {
+func (wsc *WebSocketClient) Start() {
+	go wsc.listen()
+	go wsc.ping()
+}
+
+func (wsc *WebSocketClient) Connect() *websocket.Conn {
 	wsc.mu.Lock()
 	defer wsc.mu.Unlock()
-	if wsc.wsconn != nil {
-		return wsc.wsconn, nil
+	if wsc.conn != nil {
+		return wsc.conn
 	}
 
 	ticker := time.NewTicker(tickPeriod)
@@ -63,21 +51,21 @@ func (wsc *WebSocketClient) Connect() (*websocket.Conn, error) {
 	for ; ; <-ticker.C {
 		select {
 		case <-wsc.ctx.Done():
-			return nil, errors.New("context done")
+			return nil
 		default:
+			wsc.eventHandler(Connecting, nil)
 			ws, _, err := websocket.DefaultDialer.Dial(wsc.configStr, nil)
 			if err != nil {
-				fmt.Sprintln(fmt.Sprintf("Cannot connect to websocket: %s\nError: %s", wsc.configStr, err.Error()))
 				continue
 			}
-			wsc.wsconn = ws
-			return wsc.wsconn, nil
+			wsc.conn = ws
+			return wsc.conn
 		}
 	}
 }
 
 func (wsc *WebSocketClient) listen() {
-	fmt.Println("listen started")
+	wsc.eventHandler(Listening, nil)
 	ticker := time.NewTicker(tickPeriod)
 	defer ticker.Stop()
 	for {
@@ -86,17 +74,12 @@ func (wsc *WebSocketClient) listen() {
 			return
 		case <-ticker.C:
 			for {
-				ws, err := wsc.Connect()
-				if err != nil {
-					fmt.Println(fmt.Sprintf("Cannot connect to websocket got error %s", err.Error()))
-					break
-				}
+				ws := wsc.Connect()
 				if ws == nil {
 					return
 				}
 				_, bytMsg, err := ws.ReadMessage()
 				if err != nil {
-					fmt.Println(fmt.Sprintf("Cannot read websocket message got error %s", err.Error()))
 					wsc.closeWs()
 					break
 				}
@@ -105,44 +88,24 @@ func (wsc *WebSocketClient) listen() {
 					fmt.Println(fmt.Sprintf("Cannot unmarshal websocket message got error %s", err.Error()))
 					break
 				}
-				// push messages to channel
+				// push messages to handler
 				wsc.msgHandler(bytMsg)
 			}
 		}
 	}
 }
 
-func (wsc *WebSocketClient) Stop() {
-	wsc.ctxCancel()
-	wsc.closeWs()
-}
-
-func (wsc *WebSocketClient) closeWs() {
-	wsc.mu.Lock()
-	if wsc.wsconn != nil {
-		wsc.wsconn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		wsc.wsconn.Close()
-		wsc.wsconn = nil
-	}
-	wsc.mu.Unlock()
-}
-
 func (wsc *WebSocketClient) ping() {
-	fmt.Println("ping pong started")
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			ws, err := wsc.Connect()
-			if err != nil {
-				fmt.Println(fmt.Sprintf("Cannot connect to websocket got error %s", err.Error()))
-				break
-			}
+			ws := wsc.Connect()
 			if ws == nil {
 				continue
 			}
-			if err := wsc.wsconn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(pingPeriod/2)); err != nil {
+			if err := wsc.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(pingPeriod/2)); err != nil {
 				wsc.closeWs()
 			}
 		case <-wsc.ctx.Done():
@@ -151,8 +114,34 @@ func (wsc *WebSocketClient) ping() {
 	}
 }
 
+func (wsc *WebSocketClient) eventHandler(messageType MessageType, err error) {
+	var m Message
+	m.Type = messageType
+	if err != nil {
+		m.Error = err.Error()
+	}
+	wsc.OutChan <- m
+
+}
+
 func (wsc *WebSocketClient) msgHandler(msg []byte) {
 	var m Message
 	_ = json.Unmarshal(msg, &m)
-	fmt.Printf("received Message: %v\n ", m)
+	wsc.OutChan <- m
+}
+
+func (wsc *WebSocketClient) Stop() {
+	wsc.ctxCancel()
+	wsc.closeWs()
+	wsc.eventHandler(Terminated, nil)
+}
+
+func (wsc *WebSocketClient) closeWs() {
+	wsc.mu.Lock()
+	if wsc.conn != nil {
+		wsc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		wsc.conn.Close()
+		wsc.conn = nil
+	}
+	wsc.mu.Unlock()
 }

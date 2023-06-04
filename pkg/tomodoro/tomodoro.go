@@ -9,8 +9,8 @@ import (
 )
 
 type Client struct {
-	BaseUrl    string
-	httpClient *http.Client
+	httpBaseUrl string
+	httpClient  *http.Client
 }
 
 type ErrorResponse struct {
@@ -23,7 +23,7 @@ type ErrorResponse struct {
 
 func NewClient() *Client {
 	return &Client{
-		BaseUrl: BaseURLV1,
+		httpBaseUrl: BaseURLV1,
 		httpClient: &http.Client{
 			Timeout: HttpClientTimeout,
 		},
