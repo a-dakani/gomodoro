@@ -18,7 +18,7 @@ type UpdateSettingsResponse struct {
 }
 
 func (c *Client) UpdateSettings(ctx context.Context, team string, focus int64, pause int64) (*UpdateSettingsResponse, error) {
-	u, err := url.JoinPath(c.BaseUrl, TeamSlug, team, SettingsSlug)
+	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, team, URLSettingsSlug)
 	if err != nil {
 		return nil, err
 	}

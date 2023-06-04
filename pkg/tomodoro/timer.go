@@ -28,8 +28,8 @@ type StopTimerResponse struct {
 	Message string `json:"Message"`
 }
 
-func (c *Client) StartTimer(ctx context.Context, team string, duration int64, name string) (*Timer, error) {
-	u, err := url.JoinPath(c.BaseUrl, TeamSlug, team, TimerSlug, StartTimerSlug)
+func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64, name string) (*Timer, error) {
+	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug, URLTimerSlug, URLStartTimerSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func (c *Client) StartTimer(ctx context.Context, team string, duration int64, na
 	return &res, nil
 }
 
-func (c *Client) StopTimer(ctx context.Context, team string) (*StopTimerResponse, error) {
-	u, err := url.JoinPath(c.BaseUrl, TeamSlug, team, TimerSlug)
+func (c *Client) StopTimer(ctx context.Context, teamSlug string) (*StopTimerResponse, error) {
+	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug, URLTimerSlug)
 	if err != nil {
 		return nil, err
 	}

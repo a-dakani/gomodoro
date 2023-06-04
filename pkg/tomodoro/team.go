@@ -30,8 +30,8 @@ type Link struct {
 	Type string `json:"type"`
 }
 
-func (c *Client) GetTeam(ctx context.Context, name string) (*Team, error) {
-	u, err := url.JoinPath(c.BaseUrl, TeamSlug, name)
+func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
+	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -48,14 +48,14 @@ func (c *Client) GetTeam(ctx context.Context, name string) (*Team, error) {
 	return &res, nil
 }
 
-func (c *Client) CreateTeam(ctx context.Context, name string) (*CreateTeamResponse, error) {
-	u, err := url.JoinPath(c.BaseUrl, TeamSlug)
+func (c *Client) CreateTeam(ctx context.Context, teamName string) (*CreateTeamResponse, error) {
+	u, err := url.JoinPath(c.BaseUrl, URLTeamSlug)
 	if err != nil {
 		return nil, err
 	}
 
 	body := CreateTeamRequest{
-		Team: name,
+		Team: teamName,
 	}
 
 	var bBody bytes.Buffer

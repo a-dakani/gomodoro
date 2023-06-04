@@ -7,20 +7,12 @@ import (
 )
 
 const (
-	teamName       = "testteam"
+	teamName       = "gomodoro-test-team"
 	focus    int64 = 25 * 60 * 1000 * 1000
 	pause    int64 = 5 * 60 * 1000 * 1000
 )
 
-func TestGetTeam(t *testing.T) {
-	tc := NewClient()
-	ctx := context.Background()
-
-	team, err := tc.GetTeam(ctx, teamName)
-	assert.NotNil(t, team, "team should not be nil")
-	assert.Nil(t, err, "error should be nil")
-	assert.Equal(t, teamName, team.Name, "team name should match")
-}
+var teamSlug = ""
 
 func TestCreateTeam(t *testing.T) {
 	tc := NewClient()
@@ -30,6 +22,19 @@ func TestCreateTeam(t *testing.T) {
 	assert.NotNil(t, team, "team should not be nil")
 	assert.Nil(t, err, "error should be nil")
 	assert.Equal(t, teamName, team.Name, "team name should match")
+	// save team slug for later tests
+	teamSlug = team.Slug
+}
+
+func TestGetTeam(t *testing.T) {
+	tc := NewClient()
+	ctx := context.Background()
+
+	team, err := tc.GetTeam(ctx, teamSlug)
+	assert.NotNil(t, team, "team should not be nil")
+	assert.Nil(t, err, "error should be nil")
+	assert.Equal(t, teamName, team.Name, "team name should match")
+	assert.Equal(t, teamSlug, team.Slug, "team slug should match")
 }
 
 func TestUpdateSettings(t *testing.T) {
@@ -47,7 +52,7 @@ func TestStartTimer(t *testing.T) {
 	tc := NewClient()
 	ctx := context.Background()
 
-	timer, err := tc.StartTimer(ctx, teamName, focus, "Focus")
+	timer, err := tc.StartTimer(ctx, teamSlug, focus, "Focus")
 	assert.NotNil(t, timer, "timer should not be nil")
 	assert.Nil(t, err, "error should be nil")
 	assert.Equal(t, "Fokusphase", timer.Timer.Name, "name should match")
@@ -57,10 +62,8 @@ func TestStartTimer(t *testing.T) {
 func TestStopTimer(t *testing.T) {
 	tc := NewClient()
 	ctx := context.Background()
-	// Start Timer if not running
-	_, _ = tc.StartTimer(ctx, teamName, focus, "Focus")
 
-	timer, err := tc.StopTimer(ctx, teamName)
+	timer, err := tc.StopTimer(ctx, teamSlug)
 	assert.NotNil(t, timer, "timer should not be nil")
 	assert.Nil(t, err, "error should be nil")
 	assert.Equal(t, "timerStopped", timer.Type, "name should match")

@@ -4,9 +4,10 @@ import "time"
 
 const (
 	BaseURLV1         = "https://api.tomodoro.de/api/v1/"
-	TeamSlug          = "team"
-	TimerSlug         = "timer"
-	StartTimerSlug    = "start"
-	SettingsSlug      = "settings"
+	BaseWSURLV1       = "wss://api.tomodoro.de/api/v1/"
+	URLTeamSlug       = "team"
+	URLTimerSlug      = "timer"
+	URLStartTimerSlug = "start"
+	URLSettingsSlug   = "settings"
 	HttpClientTimeout = time.Minute
 )
