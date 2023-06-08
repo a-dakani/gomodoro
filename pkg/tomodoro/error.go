@@ -7,6 +7,14 @@ import (
 	"net/http"
 )
 
+type ErrorResponse struct {
+	Href  string `json:"href"`
+	Error struct {
+		Error   int    `json:"error"`
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
 type ErrType string
 
 type RequestError struct {

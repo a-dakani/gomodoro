@@ -6,10 +6,10 @@ const (
 	Tick         MessageType = "tick"
 	TimerStopped MessageType = "timerStopped"
 	TimerStarted MessageType = "timerStarted"
-	Connecting   MessageType = "connecting" // Only Used for internal purposes
-	Listening    MessageType = "listening"  // Only Used for internal purposes
-	Error        MessageType = "error"      // Only Used for internal purposes
-	Terminated   MessageType = "terminated" // Only Used for internal purposes
+	Connecting   MessageType = "connecting"  // Only Used for internal purposes
+	Connected    MessageType = "connected"   // Only Used for internal purposes
+	Error        MessageType = "error"       // Only Used for internal purposes
+	Terminating  MessageType = "terminating" // Only Used for internal purposes
 )
 
 type Message struct {
@@ -33,4 +33,13 @@ func (m *Message) IsTimerStopped() bool {
 
 func (m *Message) IsTimerStarted() bool {
 	return m.Type == TimerStarted
+}
+func (m *Message) IsConnecting() bool {
+	return m.Type == Connecting
+}
+func (m *Message) IsConnected() bool {
+	return m.Type == Connected
+}
+func (m *Message) IsError() bool {
+	return m.Type == Error
 }

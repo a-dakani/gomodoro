@@ -45,7 +45,6 @@ func (wsc *WebSocketClient) Connect() *websocket.Conn {
 	if wsc.conn != nil {
 		return wsc.conn
 	}
-
 	ticker := time.NewTicker(tickPeriod)
 	defer ticker.Stop()
 	for ; ; <-ticker.C {
@@ -56,16 +55,17 @@ func (wsc *WebSocketClient) Connect() *websocket.Conn {
 			wsc.eventHandler(Connecting, nil)
 			ws, _, err := websocket.DefaultDialer.Dial(wsc.configStr, nil)
 			if err != nil {
+				fmt.Println(fmt.Sprintf("Cannot connect to websocket got error %s", err.Error()))
 				continue
 			}
 			wsc.conn = ws
+			wsc.eventHandler(Connected, nil)
 			return wsc.conn
 		}
 	}
 }
 
 func (wsc *WebSocketClient) listen() {
-	wsc.eventHandler(Listening, nil)
 	ticker := time.NewTicker(tickPeriod)
 	defer ticker.Stop()
 	for {
@@ -131,16 +131,24 @@ func (wsc *WebSocketClient) msgHandler(msg []byte) {
 }
 
 func (wsc *WebSocketClient) Stop() {
+	wsc.eventHandler(Terminating, nil)
 	wsc.ctxCancel()
 	wsc.closeWs()
-	wsc.eventHandler(Terminated, nil)
 }
 
 func (wsc *WebSocketClient) closeWs() {
 	wsc.mu.Lock()
 	if wsc.conn != nil {
-		wsc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		wsc.conn.Close()
+		err := wsc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		if err != nil {
+			fmt.Println(fmt.Sprintf("Cannot close websocket got error %s", err.Error()))
+			return
+		}
+		err = wsc.conn.Close()
+		if err != nil {
+			fmt.Println(fmt.Sprintf("Cannot close websocket got error %s", err.Error()))
+			return
+		}
 		wsc.conn = nil
 	}
 	wsc.mu.Unlock()

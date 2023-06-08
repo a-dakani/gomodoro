@@ -13,14 +13,6 @@ type Client struct {
 	httpClient  *http.Client
 }
 
-type ErrorResponse struct {
-	Href  string `json:"href"`
-	Error struct {
-		Error   int    `json:"error"`
-		Message string `json:"message"`
-	} `json:"error"`
-}
-
 func NewClient() *Client {
 	return &Client{
 		httpBaseUrl: BaseURLV1,
