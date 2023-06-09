@@ -9,9 +9,29 @@ import (
 var ctx = context.Background()
 var tc = tomodoro.NewClient()
 
-func handleTeamInput(teamName string) tea.Cmd {
+func getTeam(teamName string) tea.Cmd {
 	return func() tea.Msg {
 		t, err := tc.GetTeam(ctx, teamName)
+		if err != nil {
+			return ErrorMsg(err)
+		}
+
+		return Team{
+			Name:  t.Name,
+			Slug:  t.Slug,
+			Focus: t.Settings.Focus,
+			Pause: t.Settings.Pause,
+		}
+	}
+}
+
+func createTeam(teamName string) tea.Cmd {
+	return func() tea.Msg {
+		nt, err := tc.CreateTeam(ctx, teamName)
+		if err != nil {
+			return ErrorMsg(err)
+		}
+		t, err := tc.GetTeam(ctx, nt.Slug)
 		if err != nil {
 			return ErrorMsg(err)
 		}
