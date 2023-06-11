@@ -2,87 +2,62 @@ package main
 
 import (
 	"fmt"
+	"github.com/a-dakani/gomodoro/pkg/tomodoro"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/timer"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"strings"
 )
 
-var timerBlockStyle = lipgloss.NewStyle().
-	Padding(1, 2).
-	Border(lipgloss.ThickBorder(), false, false, false, true).
-	Render
-
-type keyMap struct {
-	joinTeam       key.Binding
-	getTeam        key.Binding
-	removeTeam     key.Binding
-	startFocus     key.Binding
-	stopTimer      key.Binding
-	startPause     key.Binding
-	toggleHelpMenu key.Binding
-}
-
-func appKeyMap() *keyMap {
-	return &keyMap{
-		joinTeam: key.NewBinding(
-			key.WithKeys("enter"),
-			key.WithHelp("enter", "join team"),
-		),
-		getTeam: key.NewBinding(
-			key.WithKeys("a", "+"),
-			key.WithHelp("a/+", "add team"),
-		),
-		removeTeam: key.NewBinding(
-			key.WithKeys("r", "-"),
-			key.WithHelp("r/-", "remove team"),
-		),
-		startFocus: key.NewBinding(
-			key.WithKeys("ctrl+f"),
-			key.WithHelp("ctrl+f", "start focus"),
-		),
-		startPause: key.NewBinding(
-			key.WithKeys("ctrl+p"),
-			key.WithHelp("ctrl+p", "start pause"),
-		),
-		stopTimer: key.NewBinding(
-			key.WithKeys("ctrl+s"),
-			key.WithHelp("ctrl+s", "stop timer"),
-		),
-		toggleHelpMenu: key.NewBinding(
-			key.WithKeys("h"),
-			key.WithHelp("h", "toggle help"),
-		),
-	}
-}
+// TODO handle errors
+// TODO make a Timer component
+// TODO add logging to file
 
 type sessionState int
 
+type keymap struct {
+	Add    key.Binding
+	Remove key.Binding
+	Back   key.Binding
+	Quit   key.Binding
+}
+
+// Keymap reusable key mappings shared across models
+var Keymap = keymap{
+	Add: key.NewBinding(
+		key.WithKeys("+", "a"),
+		key.WithHelp("+/a", "add"),
+	),
+	Remove: key.NewBinding(
+		key.WithKeys("-", "d"),
+		key.WithHelp("-/d", "remove"),
+	),
+	Back: key.NewBinding(
+		key.WithKeys("esc"),
+		key.WithHelp("esc", "back"),
+	),
+	Quit: key.NewBinding(
+		key.WithKeys("q", "ctlr+c"),
+		key.WithHelp("q/ctlr+c", "quit"),
+	),
+}
+
 const (
-	showTimer sessionState = iota
-	showTeams
-	noTeams
+	noTeams sessionState = iota
+	showList
+	showTimer
 	showInput
 )
 
-type inputFields int
-
-const (
-	inputSlugField inputFields = iota
-	inputSubmitButton
-	inputCancelButton
-)
-
 type Model struct {
-	state        sessionState
-	input        textinput.Model
-	timer        timer.Model
-	teamList     list.Model
-	selectedTeam int
-	err          error
+	state     sessionState
+	sub       chan tomodoro.Message
+	ws        *tomodoro.WebSocketClient
+	input     textinput.Model
+	remaining int64
+	teamList  list.Model
+	err       error
 }
 
 func New() *Model {
@@ -90,24 +65,27 @@ func New() *Model {
 	ti.CharLimit = 30
 	ti.Placeholder = "Team Slug"
 	ti.Focus()
+
 	delegate := list.NewDefaultDelegate()
-	tl := list.New([]list.Item{}, delegate, defaultListWidth, defaultListWidth)
+	delegate.SetHeight(3)
+	delegate.ShortHelpFunc = func() []key.Binding { return []key.Binding{Keymap.Add, Keymap.Remove} }
+	delegate.FullHelpFunc = func() [][]key.Binding { return [][]key.Binding{{Keymap.Add, Keymap.Remove}} }
+	tl := list.New([]list.Item{}, delegate, defaultListHeight, defaultListWidth)
 	tl.Title = "Teams"
 
 	return &Model{
-		state:        noTeams,
-		input:        ti,
-		timer:        timer.Model{},
-		teamList:     tl,
-		selectedTeam: 0,
-		err:          nil,
+		state:     noTeams,
+		sub:       make(chan tomodoro.Message, 100),
+		input:     ti,
+		remaining: 0,
+		teamList:  tl,
+		err:       nil,
 	}
-
 }
 
 func (m *Model) Init() tea.Cmd {
 	m.loadTeams()
-	return m.timer.Init()
+	return nil
 }
 
 func (m *Model) loadTeams() {
@@ -122,66 +100,202 @@ func (m *Model) loadTeams() {
 		items[i] = team
 	}
 	if len(items) != 0 {
-		m.state = showTeams
+		m.state = showList
 	}
 
 	m.teamList.SetItems(items)
 }
 
-func (m *Model) reScaleList(width, height int) {
-	m.teamList.SetWidth(width)
-	m.teamList.SetHeight(height)
-}
-
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	switch ms := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.reScaleList(ms.Width/3, ms.Height)
-	case tea.KeyMsg:
-		switch ms.Type {
-		case tea.KeyCtrlC:
+
+	// if msg type is tea.KeyMsg and is CtrlC, return tea.Quit
+	if msg, ok := msg.(tea.KeyMsg); ok {
+		if msg.Type == tea.KeyCtrlC {
 			return m, tea.Quit
-		case tea.KeyEnter:
-			m.selectedTeam = m.teamList.Index()
-			m.state = showTimer
-		case tea.KeyCtrlB:
-			m.state = showTeams
 		}
 	}
-	m.teamList, cmd = m.teamList.Update(msg)
+
+	// else check the state of the model
+	switch m.state {
+	case noTeams:
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			// update the Input width and height
+		case tea.KeyMsg:
+			switch {
+			case key.Matches(msg, Keymap.Add):
+				m.state = showInput
+			}
+		}
+	case showInput:
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			// update the Input width and height
+		case Team:
+			if err := addTeamToFile(msg); err != nil {
+				m.err = err
+				return m, nil
+			}
+			// reload the list of teams
+			m.loadTeams()
+			m.state = showList
+		case tea.KeyMsg:
+			switch {
+			case msg.Type == tea.KeyEnter:
+				// reset the error in case it was set
+				m.err = nil
+				return m, m.addTeam()
+			case key.Matches(msg, Keymap.Back):
+				if len(m.teamList.Items()) == 0 {
+					m.state = noTeams
+				} else {
+					m.state = showList
+				}
+			}
+		}
+		m.input, cmd = m.input.Update(msg)
+	case showList:
+		switch msg := msg.(type) {
+		case tea.WindowSizeMsg:
+			// update the list width and height
+			m.teamList.SetHeight(msg.Height)
+			m.teamList.SetWidth(msg.Width)
+		case tea.KeyMsg:
+			switch {
+			case msg.Type == tea.KeyEnter:
+				m.state = showTimer
+				return m, tea.Batch(m.joinTeam(), m.waitForActivity())
+			case key.Matches(msg, Keymap.Add):
+				m.state = showInput
+			case key.Matches(msg, Keymap.Remove):
+
+				if err := removeTeamFromFile(m.teamList.Items()[m.teamList.Index()].(Team)); err != nil {
+					m.err = err
+				}
+				m.teamList.RemoveItem(m.teamList.Index())
+				//TODO remove team from file
+				if len(m.teamList.Items()) == 0 {
+					m.state = noTeams
+				}
+			}
+
+		}
+		m.teamList, cmd = m.teamList.Update(msg)
+	case showTimer:
+		switch msg := msg.(type) {
+		case tomodoro.Message:
+			m.remaining = msg.Payload.RemainingTime // record external activity
+			return m, m.waitForActivity()
+		case tea.WindowSizeMsg:
+			// update the timer width and height
+		case tea.KeyMsg:
+			switch {
+			case msg.Type == tea.KeyEnter:
+				m.state = showTimer
+			case key.Matches(msg, Keymap.Back):
+				m.state = showList
+			}
+		}
+
+	}
+
 	return m, cmd
 }
 
 func (m *Model) View() string {
-	switch m.state {
-	case showTeams:
-		return m.teamList.View()
-	case showTimer:
-		return m.timerString()
-	case showInput:
-		return m.input.View()
+	var output string
+	if m.err != nil {
+		output += m.err.Error() + "\n"
 	}
-	return "No teams found. Please add a team."
+	switch m.state {
+	case showList:
+		output += m.teamList.View()
+	case showTimer:
+		output += m.timerString()
+	case showInput:
+		output += m.input.View()
+	case noTeams:
+		output += "No teams found. to fetch a team from tomodoro press `+`"
+	default:
+		output += "Something went wrong. Please try again."
+	}
+
+	return output
 }
 
 func (m *Model) timerString() string {
+	// TODO: build a seperate bubble for the timer in pkg
 	var b strings.Builder
 	if len(m.teamList.Items()) == 0 {
 		b.WriteString("No teams found. Please add a team.")
-		return timerBlockStyle(b.String())
+		return b.String()
 	}
-	team := m.teamList.Items()[m.selectedTeam].(Team)
+	team := m.teamList.SelectedItem().(Team)
 	b.WriteString(team.Name + "\n")
-	tf := fmt.Sprintf("Focus: %d minutes and %d seconds", team.Focus/60/1000000000, team.Focus%60/1000000000)
-	tp := fmt.Sprintf("Pause: %d minutes and %d seconds", team.Pause/60/1000000000, team.Pause%60/1000000000)
+	tf := fmt.Sprintf("focusTimer: %d minutes and %d seconds", team.Focus/60/1000000000, team.Focus%60/1000000000)
+	tp := fmt.Sprintf("pauseTimer: %d minutes and %d seconds", team.Pause/60/1000000000, team.Pause%60/1000000000)
 
 	b.WriteString(tf + "\n")
 	b.WriteString(tp + "\n")
 
+	if m.remaining > 0 {
+		b.WriteString(fmt.Sprintf(" %d minutes and %d seconds", m.remaining/1000000000/60, m.remaining/1000000000%60))
+	}
 	b.WriteString("\n\n Countdown \n\n")
 
-	b.WriteString(m.timer.View())
+	return b.String()
+}
 
-	return timerBlockStyle(b.String())
+func (m *Model) addTeam() tea.Cmd {
+	return func() tea.Msg {
+		team, err := getTeam(m.input.Value())
+		if err != nil {
+			m.err = err
+			return ErrorMsg(err)
+		}
+		return team
+	}
+}
+
+func (m *Model) joinTeam() tea.Cmd {
+	return func() tea.Msg {
+		//TODO refactor method to be cancelable
+		//TODO start method only when team is selected and timer is shown
+		//TODO when another timer is selected, cancel the previous one and connect to the new one
+		slug := m.teamList.SelectedItem().(Team).Slug
+
+		// if there is already a websocket connection, check if it is the same team
+		if m.ws != nil {
+			if m.ws.Slug == slug {
+				return nil
+			} else {
+				m.ws.Stop()
+				m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
+				m.ws.Start()
+				for {
+					for elem := range m.ws.OutChan {
+						if elem.Type == tomodoro.Tick {
+							m.sub <- elem
+						}
+					}
+				}
+			}
+		}
+		m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
+		m.ws.Start()
+		for {
+			for elem := range m.ws.OutChan {
+				if elem.Type == tomodoro.Tick {
+					m.sub <- elem
+				}
+			}
+		}
+	}
+}
+
+func (m *Model) waitForActivity() tea.Cmd {
+	return func() tea.Msg {
+		return <-m.sub
+	}
 }

@@ -2,6 +2,6 @@ package main
 
 const (
 	teamsFile         = "teams.json"
-	defaultListLength = 200
+	defaultListHeight = 100
 	defaultListWidth  = 100
 )

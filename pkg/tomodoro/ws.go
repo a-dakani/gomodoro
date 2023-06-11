@@ -15,6 +15,7 @@ const tickPeriod = 1 * time.Second
 
 type WebSocketClient struct {
 	configStr string
+	Slug      string
 	ctx       context.Context
 	ctxCancel context.CancelFunc
 	mu        sync.RWMutex
@@ -24,7 +25,7 @@ type WebSocketClient struct {
 
 func NewWebSocketClient(teamSlug string) *WebSocketClient {
 	wsc := WebSocketClient{}
-
+	wsc.Slug = teamSlug
 	wsc.configStr, _ = url.JoinPath(BaseWSURLV1, URLTeamSlug, teamSlug, "ws")
 
 	wsc.ctx, wsc.ctxCancel = context.WithCancel(context.Background())
@@ -134,6 +135,7 @@ func (wsc *WebSocketClient) Stop() {
 	wsc.eventHandler(Terminating, nil)
 	wsc.ctxCancel()
 	wsc.closeWs()
+	close(wsc.OutChan)
 }
 
 func (wsc *WebSocketClient) closeWs() {

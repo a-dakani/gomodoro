@@ -7,7 +7,7 @@ import (
 
 func main() {
 	m := New()
-	program := tea.NewProgram(m)
+	program := tea.NewProgram(m, tea.WithAltScreen())
 
 	_, err := program.Run()
 	if err != nil {
