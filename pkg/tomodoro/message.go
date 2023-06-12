@@ -19,8 +19,9 @@ type Message struct {
 		RemainingTime int64  `json:"remainingTime"`
 		Team          string `json:"team"`
 		Timestamp     int64  `json:"timestamp"`
+		Duration      int64  `json:"duration"`
 	} `json:"payload"`
-	Error string // Only Used for internal purposes
+	Error error // Only Used for internal purposes
 }
 
 func (m *Message) IsTick() bool {

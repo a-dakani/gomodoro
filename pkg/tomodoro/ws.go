@@ -119,7 +119,7 @@ func (wsc *WebSocketClient) eventHandler(messageType MessageType, err error) {
 	var m Message
 	m.Type = messageType
 	if err != nil {
-		m.Error = err.Error()
+		m.Error = err
 	}
 	wsc.OutChan <- m
 

@@ -51,13 +51,15 @@ const (
 )
 
 type Model struct {
-	state     sessionState
-	sub       chan tomodoro.Message
-	ws        *tomodoro.WebSocketClient
-	input     textinput.Model
-	remaining int64
-	teamList  list.Model
-	err       error
+	state          sessionState
+	sub            chan tomodoro.Message
+	ws             *tomodoro.WebSocketClient
+	input          textinput.Model
+	timerName      string
+	timerState     tomodoro.MessageType
+	timerRemaining int64
+	teamList       list.Model
+	err            error
 }
 
 func New() *Model {
@@ -74,12 +76,14 @@ func New() *Model {
 	tl.Title = "Teams"
 
 	return &Model{
-		state:     noTeams,
-		sub:       make(chan tomodoro.Message, 100),
-		input:     ti,
-		remaining: 0,
-		teamList:  tl,
-		err:       nil,
+		state:          noTeams,
+		sub:            make(chan tomodoro.Message, 100),
+		input:          ti,
+		timerName:      "None",
+		timerState:     tomodoro.TimerStopped,
+		timerRemaining: 0,
+		teamList:       tl,
+		err:            nil,
 	}
 }
 
@@ -185,7 +189,29 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case showTimer:
 		switch msg := msg.(type) {
 		case tomodoro.Message:
-			m.remaining = msg.Payload.RemainingTime // record external activity
+			switch msg.Type {
+			case tomodoro.Tick:
+				if m.timerState != tomodoro.TimerStarted {
+					m.timerState = tomodoro.TimerStarted
+				}
+				m.timerName = msg.Payload.Name
+				m.timerRemaining = msg.Payload.RemainingTime
+			case tomodoro.TimerStarted:
+				m.timerState = tomodoro.TimerStarted
+				m.timerName = msg.Payload.Name
+			case tomodoro.TimerStopped:
+				m.timerState = tomodoro.TimerStopped
+			case tomodoro.Connecting:
+				m.timerState = tomodoro.Connecting
+			case tomodoro.Connected:
+				m.timerState = tomodoro.Connected
+			case tomodoro.Terminating:
+				m.timerState = tomodoro.Terminating
+			case tomodoro.Error:
+				m.timerState = tomodoro.Error
+				m.err = msg.Error
+
+			}
 			return m, m.waitForActivity()
 		case tea.WindowSizeMsg:
 			// update the timer width and height
@@ -233,16 +259,19 @@ func (m *Model) timerString() string {
 	}
 	team := m.teamList.SelectedItem().(Team)
 	b.WriteString(team.Name + "\n")
-	tf := fmt.Sprintf("focusTimer: %d minutes and %d seconds", team.Focus/60/1000000000, team.Focus%60/1000000000)
-	tp := fmt.Sprintf("pauseTimer: %d minutes and %d seconds", team.Pause/60/1000000000, team.Pause%60/1000000000)
+	tf := fmt.Sprintf("focusTimer: %d minutes and %d seconds", team.Focus/1000000000/60, team.Focus/1000000000%60)
+	tp := fmt.Sprintf("pauseTimer: %d minutes and %d seconds", team.Pause/1000000000/60, team.Pause/1000000000%60)
 
 	b.WriteString(tf + "\n")
 	b.WriteString(tp + "\n")
 
-	if m.remaining > 0 {
-		b.WriteString(fmt.Sprintf(" %d minutes and %d seconds", m.remaining/1000000000/60, m.remaining/1000000000%60))
+	if m.timerRemaining > 0 {
+		b.WriteString(fmt.Sprintf("Remaining time:\t %d minutes and %d seconds", m.timerRemaining/1000000000/60, m.timerRemaining/1000000000%60) + "\n")
+	} else {
+		b.WriteString("Remaining time:\t 0 minutes and 0 seconds" + "\n")
 	}
-	b.WriteString("\n\n Countdown \n\n")
+	b.WriteString(fmt.Sprintf("Timer Status:\t %s", m.timerState) + "\n")
+	b.WriteString(fmt.Sprintf("Timer Name:\t %s", m.timerName) + "\n")
 
 	return b.String()
 }
@@ -275,9 +304,7 @@ func (m *Model) joinTeam() tea.Cmd {
 				m.ws.Start()
 				for {
 					for elem := range m.ws.OutChan {
-						if elem.Type == tomodoro.Tick {
-							m.sub <- elem
-						}
+						m.sub <- elem
 					}
 				}
 			}
@@ -285,8 +312,8 @@ func (m *Model) joinTeam() tea.Cmd {
 		m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
 		m.ws.Start()
 		for {
-			for elem := range m.ws.OutChan {
-				if elem.Type == tomodoro.Tick {
+			for {
+				for elem := range m.ws.OutChan {
 					m.sub <- elem
 				}
 			}
