@@ -1,15 +1,17 @@
 package main
 
 import (
+	"fmt"
 	"github.com/charmbracelet/lipgloss"
+	"strings"
 )
 
 var numbers = map[int]string{
 	0: `
  ██████ 
-██  ████
-██ ██ ██
-████  ██
+██    ██
+██    ██
+██    ██
  ██████ 
 `,
 	1: `
@@ -93,49 +95,50 @@ var chars = map[rune]string{
 `,
 	'f': `
 ███████  ██████   ██████ ██    ██ ███████
-██      ██    ██ ██      ██    ██ ██
+██      ██    ██ ██      ██    ██ ██     
 █████   ██    ██ ██      ██    ██ ███████
 ██      ██    ██ ██      ██    ██      ██
 ██       ██████   ██████  ██████  ███████
 `,
 	'p': `
 ██████   █████  ██    ██ ███████ ███████
-██   ██ ██   ██ ██    ██ ██      ██
-██████  ███████ ██    ██ ███████ █████
-██      ██   ██ ██    ██      ██ ██
+██   ██ ██   ██ ██    ██ ██      ██     
+██████  ███████ ██    ██ ███████ █████  
+██      ██   ██ ██    ██      ██ ██     
 ██      ██   ██  ██████  ███████ ███████
 `,
 	'n': `
-███    ██  ██████  ███    ██ ███████ 
-████   ██ ██    ██ ████   ██ ██      
-██ ██  ██ ██    ██ ██ ██  ██ █████   
-██  ██ ██ ██    ██ ██  ██ ██ ██      
-██   ████  ██████  ██   ████ ███████
+██ ███    ██  █████   ██████ ████████ ██ ██    ██ ███████
+██ ████   ██ ██   ██ ██         ██    ██ ██    ██ ██     
+██ ██ ██  ██ ███████ ██         ██    ██ ██    ██ █████  
+██ ██  ██ ██ ██   ██ ██         ██    ██  ██  ██  ██     
+██ ██   ████ ██   ██  ██████    ██    ██   ████   ███████
 `,
 }
 
 func getNumber(r int) string {
 	return numbers[r]
 }
-func getPauseChar() string {
-	return chars['p']
-}
+
 func getPhase(p string) string {
 	switch p {
-	case "Fokusphase":
+	case "Fokusphase", "Focus":
 		return chars['f']
-	case "Verfügbar":
+	case "Verfügbar", "Pause":
 		return chars['p']
 	default:
 		return chars['n']
 	}
 }
+
 func getColonChar() string {
 	return chars['c']
 }
+
 func getSpaceChar() string {
 	return chars['s']
 }
+
 func getTimeString(t int64) string {
 	m := t / 1000000000 / 60
 	s := t / 1000000000 % 60
@@ -154,4 +157,47 @@ func getTimeString(t int64) string {
 		getNumber(int(s1)),
 		getSpaceChar(),
 		getNumber(int(s2)))
+}
+
+func addHelp(t string, help string, height int) string {
+	//define a string builder
+	var b strings.Builder
+	//calculate the number of lines in the help and the timer
+	helpLines := strings.Count(help, "\n")
+	timerLines := strings.Count(t, "\n")
+	//add empty lines between timer and help
+	emptyLines := height - helpLines - timerLines - 1
+	// if number is negative set it to 0
+	if emptyLines < 0 {
+		emptyLines = 0
+	}
+	//add the timer
+	b.WriteString(t)
+	//add empty lines
+	b.WriteString(strings.Repeat("\n", emptyLines))
+	//add the help
+	b.WriteString(help)
+	return b.String()
+}
+
+func timerView(team Team, remaining int64, name, state string) string {
+	var b strings.Builder
+
+	//Print Team
+	b.WriteString(fmt.Sprintf("Team Name:\t%s\n", team.Name))
+
+	//Print Timer Settings
+	b.WriteString(fmt.Sprintf("FocusTimer:\t%d minutes and %d seconds", team.Focus/1000000000/60, team.Focus/1000000000%60) + "\n")
+	b.WriteString(fmt.Sprintf("PauseTimer:\t%d minutes and %d seconds", team.Pause/1000000000/60, team.Pause/1000000000%60) + "\n")
+
+	//Print Timer Status
+	b.WriteString(fmt.Sprintf("Timer Status:\t%s", state))
+
+	//Print Time
+	b.WriteString(getTimeString(remaining) + "\n")
+
+	//Print Phase
+	b.WriteString(getPhase(name) + "\n")
+
+	return b.String()
 }

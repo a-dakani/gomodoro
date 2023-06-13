@@ -13,7 +13,7 @@ func readTeamsFile() ([]Team, error) {
 		if err != nil {
 			return teams, err
 		}
-		team := addTestTeam()
+		team := createTestTeam()
 		teams = append(teams, team)
 		bytes, err := json.MarshalIndent(teams, "", "  ")
 		if err != nil {
@@ -85,7 +85,7 @@ func addTeamToFile(team Team) error {
 	return nil
 }
 
-func addTestTeam() Team {
+func createTestTeam() Team {
 	return Team{
 		Name:  "gomodoro-test-team",
 		Slug:  "gomodoro-test-team",
