@@ -206,6 +206,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case tomodoro.Connected:
 				m.timerState = tomodoro.Connected
 			case tomodoro.Terminating:
+				m.timerRemaining = 0
+				m.timerName = "None"
 				m.timerState = tomodoro.Terminating
 			case tomodoro.Error:
 				m.timerState = tomodoro.Error
@@ -264,14 +266,12 @@ func (m *Model) timerString() string {
 
 	b.WriteString(tf + "\n")
 	b.WriteString(tp + "\n")
-
-	if m.timerRemaining > 0 {
-		b.WriteString(fmt.Sprintf("Remaining time:\t %d minutes and %d seconds", m.timerRemaining/1000000000/60, m.timerRemaining/1000000000%60) + "\n")
-	} else {
-		b.WriteString("Remaining time:\t 0 minutes and 0 seconds" + "\n")
-	}
 	b.WriteString(fmt.Sprintf("Timer Status:\t %s", m.timerState) + "\n")
-	b.WriteString(fmt.Sprintf("Timer Name:\t %s", m.timerName) + "\n")
+
+	//Print Time
+	b.WriteString(getTimeString(m.timerRemaining) + "\n")
+
+	b.WriteString(getPhase(m.timerName) + "\n")
 
 	return b.String()
 }
@@ -289,11 +289,11 @@ func (m *Model) addTeam() tea.Cmd {
 
 func (m *Model) joinTeam() tea.Cmd {
 	return func() tea.Msg {
+		//TODO reset timer and status when joining a new team
 		//TODO refactor method to be cancelable
 		//TODO start method only when team is selected and timer is shown
 		//TODO when another timer is selected, cancel the previous one and connect to the new one
 		slug := m.teamList.SelectedItem().(Team).Slug
-
 		// if there is already a websocket connection, check if it is the same team
 		if m.ws != nil {
 			if m.ws.Slug == slug {
