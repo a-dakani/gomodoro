@@ -23,9 +23,10 @@ type requestError struct {
 
 func newRequestError(res *http.Response) error {
 	resBody := errorResponse{}
-
 	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
-		return fmt.Errorf("while calling %s got status: %d but failed to parse error response body", res.Request.URL, res.StatusCode)
+		return fmt.Errorf(
+			"while calling %s got status: %d but failed to parse error response body",
+			res.Request.URL, res.StatusCode)
 	}
 
 	return &requestError{

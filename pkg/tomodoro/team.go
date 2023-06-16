@@ -49,6 +49,7 @@ func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
+
 	return &res, nil
 }
 
@@ -78,6 +79,6 @@ func (c *Client) CreateTeam(ctx context.Context, teamName string) (*CreateTeamRe
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
-	return &res, nil
 
+	return &res, nil
 }

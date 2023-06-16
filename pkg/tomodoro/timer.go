@@ -57,6 +57,7 @@ func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
+
 	return &res, nil
 }
 
@@ -76,5 +77,6 @@ func (c *Client) StopTimer(ctx context.Context, teamSlug string) (*StopTimerResp
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
+
 	return &res, nil
 }

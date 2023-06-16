@@ -7,7 +7,6 @@ const (
 	appForegroundColor     = "#FFFFFF"
 	titleBackgroundColor   = "#FFFFFF"
 	titleForegroundColor   = "#000000"
-	helpForegroundColor    = "#FFFFFF"
 	focusedForegroundColor = "#FF0000"
 	pausedForegroundColor  = "#006600"
 )

@@ -20,7 +20,11 @@ type UpdateSettingsResponse struct {
 }
 
 // UpdateSettings updates the settings for a team
-func (c *Client) UpdateSettings(ctx context.Context, team string, focus int64, pause int64) (*UpdateSettingsResponse, error) {
+func (c *Client) UpdateSettings(
+	ctx context.Context,
+	team string,
+	focus int64,
+	pause int64) (*UpdateSettingsResponse, error) {
 	u, err := url.JoinPath(c.httpBaseURL, urlTeamSlug, team, urlSettingsSlug)
 	if err != nil {
 		return nil, err
@@ -46,5 +50,6 @@ func (c *Client) UpdateSettings(ctx context.Context, team string, focus int64, p
 	if err := c.sendRequest(ctx, req, &res); err != nil {
 		return nil, err
 	}
+
 	return &res, nil
 }

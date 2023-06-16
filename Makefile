@@ -7,7 +7,7 @@ GOBUILD = $(GOCMD) build
 GOCLEAN = $(GOCMD) clean
 
 # Main package and executable name
-PACKAGE = ./cmd/gomodoro
+PACKAGE = ./cmd/gomodoro-cli
 EXECUTABLE = gomodoro
 BUILD_PATH = ./build
 

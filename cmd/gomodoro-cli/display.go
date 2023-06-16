@@ -146,6 +146,7 @@ func getTimeString(t int64) string {
 	m2 := m % 10
 	s1 := s / 10
 	s2 := s % 10
+
 	return lipgloss.JoinHorizontal(
 		lipgloss.Left,
 		getNumber(int(m1)),
@@ -160,30 +161,32 @@ func getTimeString(t int64) string {
 }
 
 func addHelp(t string, help string, height int) string {
-	//define a string builder
+	// define a string builder
 	var b strings.Builder
-	//calculate the number of lines in the help and the timer
+	// calculate the number of lines in the help and the timer
 	helpLines := strings.Count(help, "\n")
 	timerLines := strings.Count(t, "\n")
-	//add empty lines between timer and help
+	// add empty lines between timer and help
 	emptyLines := height - helpLines - timerLines - 1
 	// if number is negative set it to 0
 	if emptyLines < 0 {
 		emptyLines = 0
 	}
-	//add the timer
+	// add the timer
 	b.WriteString(t)
-	//add empty lines
+	// add empty lines
 	b.WriteString(strings.Repeat("\n", emptyLines))
-	//add the help
+	// add the help
 	b.WriteString(help)
+
 	return b.String()
 }
 
 func renderTimer(team Team, remaining int64, name, state string) string {
-
 	var rb strings.Builder
+
 	var lb strings.Builder
+
 	var b strings.Builder
 
 	lb.WriteString("Team Name:\nFocusTimer:\nPauseTimer:\nTimer Status:\n")
@@ -196,12 +199,12 @@ func renderTimer(team Team, remaining int64, name, state string) string {
 			team.Pause/1000000000%60,
 			state),
 	)
-
 	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, lb.String(), rb.String()))
-	//Print Time
+	// Print Time
 	b.WriteString(getTimeString(remaining) + "\n")
 
-	//Print Phase
+	// Print Phase
 	b.WriteString(getPhase(name) + "\n")
+
 	return b.String()
 }

@@ -2,7 +2,7 @@ package main
 
 import "fmt"
 
-// Team is a struct to hold the team data for the team list widget
+// Team is a struct to hold the team data for the team list widget.
 type Team struct {
 	Name  string `json:"name"`
 	Slug  string `json:"slug"`

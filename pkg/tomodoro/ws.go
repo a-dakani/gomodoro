@@ -46,24 +46,30 @@ func (wsc *WebSocketClient) Start() {
 func (wsc *WebSocketClient) connect() *websocket.Conn {
 	wsc.mu.Lock()
 	defer wsc.mu.Unlock()
+
 	if wsc.conn != nil {
 		return wsc.conn
 	}
+
 	ticker := time.NewTicker(tickPeriod)
 	defer ticker.Stop()
+
 	for ; ; <-ticker.C {
 		select {
 		case <-wsc.ctx.Done():
 			return nil
 		default:
 			wsc.eventHandler(Connecting, nil)
-			ws, _, err := websocket.DefaultDialer.Dial(wsc.configStr, nil)
+
+			ws, _, err := websocket.DefaultDialer.Dial(wsc.configStr, nil) //nolint:bodyclose
 			if err != nil {
 				fmt.Printf("Cannot connect to websocket got error %s", err.Error())
 				continue
 			}
+
 			wsc.conn = ws
 			wsc.eventHandler(Connected, nil)
+
 			return wsc.conn
 		}
 	}
@@ -72,6 +78,7 @@ func (wsc *WebSocketClient) connect() *websocket.Conn {
 func (wsc *WebSocketClient) listen() {
 	ticker := time.NewTicker(tickPeriod)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-wsc.ctx.Done():
@@ -82,6 +89,7 @@ func (wsc *WebSocketClient) listen() {
 				if ws == nil {
 					return
 				}
+
 				_, bytMsg, err := ws.ReadMessage()
 				if err != nil {
 					wsc.closeWs()
@@ -102,6 +110,7 @@ func (wsc *WebSocketClient) listen() {
 func (wsc *WebSocketClient) ping() {
 	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -109,6 +118,7 @@ func (wsc *WebSocketClient) ping() {
 			if ws == nil {
 				continue
 			}
+
 			if err := wsc.conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(pingPeriod/2)); err != nil {
 				wsc.closeWs()
 			}
@@ -121,11 +131,11 @@ func (wsc *WebSocketClient) ping() {
 func (wsc *WebSocketClient) eventHandler(messageType MessageType, err error) {
 	var m Message
 	m.Type = messageType
+
 	if err != nil {
 		m.Error = err
 	}
 	wsc.OutChan <- m
-
 }
 
 func (wsc *WebSocketClient) msgHandler(msg []byte) {
@@ -150,11 +160,13 @@ func (wsc *WebSocketClient) closeWs() {
 			fmt.Printf("Cannot close websocket got error %s", err.Error())
 			return
 		}
+
 		err = wsc.conn.Close()
 		if err != nil {
 			fmt.Printf("Cannot close websocket got error %s", err.Error())
 			return
 		}
+
 		wsc.conn = nil
 	}
 	wsc.mu.Unlock()

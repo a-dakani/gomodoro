@@ -74,6 +74,8 @@ func (m *model) Init() tea.Cmd {
 	return nil
 }
 
+//nolint:funlen
+//nolint:gocognit
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
@@ -92,6 +94,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			m.windowTooSmall = false
 		}
+
 		m.height = msg.Height - stylesHeight - 1
 		m.width = msg.Width - stylesWidth
 		m.help.Width = msg.Width - stylesWidth - 2
@@ -104,10 +107,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// else check the state of the model
 	switch m.state {
 	case noTeams:
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
-			switch {
-			case key.Matches(msg, Keymap.Add):
+		if msg, ok := msg.(tea.KeyMsg); ok {
+			if key.Matches(msg, Keymap.Add) {
 				m.state = showInput
 			}
 		}
@@ -143,13 +144,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+
 		m.input, cmd = m.input.Update(msg)
 	case showList:
-
-		switch msg := msg.(type) {
-		case tea.KeyMsg:
+		if msg, ok := msg.(tea.KeyMsg); ok {
 			switch {
-			//case key.Matches(msg, Keymap.Back):
+			// case key.Matches(msg, Keymap.Back):
 			//	return m, nil
 			case msg.Type == tea.KeyEnter:
 				m.state = showTimer
@@ -157,16 +157,18 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, Keymap.Add):
 				m.state = showInput
 			case key.Matches(msg, Keymap.Remove):
-
 				if err := removeTeamFromFile(m.teamList.Items()[m.teamList.Index()].(Team)); err != nil {
 					m.err = err
 				}
+
 				m.teamList.RemoveItem(m.teamList.Index())
+
 				if len(m.teamList.Items()) == 0 {
 					m.state = noTeams
 				}
 			}
 		}
+
 		m.teamList.SetWidth(m.width)
 		m.teamList.SetHeight(m.height)
 		m.teamList.Help.Width = m.width - stylesWidth
@@ -179,6 +181,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.timerState != tomodoro.TimerStarted {
 					m.timerState = tomodoro.TimerStarted
 				}
+
 				m.timerName = msg.Payload.Name
 				m.timerRemaining = msg.Payload.RemainingTime
 			case tomodoro.TimerStarted:
@@ -200,6 +203,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.timerState = tomodoro.Error
 				m.err = msg.Error
 			}
+
 			return m, m.waitForActivity()
 		case tea.KeyMsg:
 			switch {
@@ -221,23 +225,27 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 	}
+
 	return m, cmd
 }
 
 func (m *model) View() string {
-
 	var output string
 	output += m.renderTitle()
 
 	if m.windowTooSmall {
-		t := fmt.Sprintf("Window too small. Please resize.\n\nMinimum width: %d\nMinimum height: %d", minimalWindowWidth, minimalWindowHeight)
+		t := fmt.Sprintf(
+			"Window too small. Please resize.\n\nMinimum width: %d\nMinimum height: %d",
+			minimalWindowWidth, minimalWindowHeight)
 		output += addHelp(t, "q/ctrl quit", m.height)
+
 		return appStyle.Width(m.width).Height(m.height + 1).Render(output)
 	}
 
 	if m.err != nil {
 		output += m.err.Error() + "\n"
 	}
+
 	switch m.state {
 	case showList:
 		output += m.teamList.View()
@@ -257,15 +265,18 @@ func (m *model) View() string {
 
 func (m *model) loadTeams() {
 	var teams []Team
+
 	teams, err := readTeamsFile()
 	if err != nil {
 		teams = []Team{}
 		m.err = err
 	}
+
 	items := make([]list.Item, len(teams))
 	for i, team := range teams {
 		items[i] = team
 	}
+
 	if len(items) != 0 {
 		m.state = showList
 	}
@@ -280,6 +291,7 @@ func (m *model) addTeam() tea.Cmd {
 			m.err = err
 			return ErrorMsg(err)
 		}
+
 		return team
 	}
 }
@@ -290,6 +302,7 @@ func (m *model) startFocus() tea.Cmd {
 		if err != nil {
 			return ErrorMsg(err)
 		}
+
 		return m.waitForActivity()
 	}
 }
@@ -300,6 +313,7 @@ func (m *model) startPause() tea.Cmd {
 		if err != nil {
 			return ErrorMsg(err)
 		}
+
 		return m.waitForActivity()
 	}
 }
@@ -310,6 +324,7 @@ func (m *model) stopTimer() tea.Cmd {
 		if err != nil {
 			return ErrorMsg(err)
 		}
+
 		return m.waitForActivity()
 	}
 }
@@ -322,18 +337,21 @@ func (m *model) joinTeam() tea.Cmd {
 			if m.ws.Slug == slug {
 				return nil
 			}
+
 			m.ws.Stop()
 			m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
 			m.ws.Start()
+
 			for {
 				for elem := range m.ws.OutChan {
 					m.sub <- elem
 				}
 			}
-
 		}
+
 		m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
 		m.ws.Start()
+
 		for {
 			for {
 				for elem := range m.ws.OutChan {

@@ -1,10 +1,10 @@
 package tomodoro
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 )
 
@@ -47,11 +47,11 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 	if err := json.NewDecoder(res.Body).Decode(&v); err != nil {
 		return errors.New("failed to parse response body")
 	}
+
 	return nil
 }
 
-func (c *Client) createRequestBody(b interface{}, bb *bytes.Buffer) error {
-
+func (c *Client) createRequestBody(b interface{}, bb io.Writer) error {
 	mBody, err := json.Marshal(b)
 	if err != nil {
 		return errors.New("failed to parse request body")
@@ -60,5 +60,6 @@ func (c *Client) createRequestBody(b interface{}, bb *bytes.Buffer) error {
 	if _, err := bb.Write(mBody); err != nil {
 		return errors.New("failed to write request body")
 	}
+
 	return nil
 }

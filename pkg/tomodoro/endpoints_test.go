@@ -17,7 +17,7 @@ var teamSlug = "gomodoro-test-team"
 
 // Disable this test to avoid creating a new team every time
 
-//func TestCreateTeam(t *testing.T) {
+// func TestCreateTeam(t *testing.T) {
 //	tc := NewClient()
 //	ctx := context.Background()
 //
