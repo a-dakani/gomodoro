@@ -108,11 +108,11 @@ var chars = map[rune]string{
 ██      ██   ██  ██████  ███████ ███████
 `,
 	'n': `
-██ ███    ██  █████   ██████ ████████ ██ ██    ██ ███████
-██ ████   ██ ██   ██ ██         ██    ██ ██    ██ ██     
-██ ██ ██  ██ ███████ ██         ██    ██ ██    ██ █████  
-██ ██  ██ ██ ██   ██ ██         ██    ██  ██  ██  ██     
-██ ██   ████ ██   ██  ██████    ██    ██   ████   ███████
+██ ██████  ██      ███████
+██ ██   ██ ██      ██     
+██ ██   ██ ██      █████  
+██ ██   ██ ██      ██     
+██ ██████  ███████ ███████
 `,
 }
 
@@ -123,9 +123,9 @@ func getNumber(r int) string {
 func getPhase(p string) string {
 	switch p {
 	case "Fokusphase", "Focus":
-		return chars['f']
+		return focusedStyle.Render(chars['f'])
 	case "Verfügbar", "Pause":
-		return chars['p']
+		return pausedStyle.Render(chars['p'])
 	default:
 		return chars['n']
 	}
@@ -180,24 +180,28 @@ func addHelp(t string, help string, height int) string {
 	return b.String()
 }
 
-func timerView(team Team, remaining int64, name, state string) string {
+func renderTimer(team Team, remaining int64, name, state string) string {
+
+	var rb strings.Builder
+	var lb strings.Builder
 	var b strings.Builder
 
-	//Print Team
-	b.WriteString(fmt.Sprintf("Team Name:\t%s\n", team.Name))
+	lb.WriteString("Team Name:\nFocusTimer:\nPauseTimer:\nTimer Status:\n")
+	rb.WriteString(
+		fmt.Sprintf("\t%s\n\t%d min %d sec\n\t%d min %d sec\n\t%s\n",
+			team.Name,
+			team.Focus/1000000000/60,
+			team.Focus/1000000000%60,
+			team.Pause/1000000000/60,
+			team.Pause/1000000000%60,
+			state),
+	)
 
-	//Print Timer Settings
-	b.WriteString(fmt.Sprintf("FocusTimer:\t%d minutes and %d seconds", team.Focus/1000000000/60, team.Focus/1000000000%60) + "\n")
-	b.WriteString(fmt.Sprintf("PauseTimer:\t%d minutes and %d seconds", team.Pause/1000000000/60, team.Pause/1000000000%60) + "\n")
-
-	//Print Timer Status
-	b.WriteString(fmt.Sprintf("Timer Status:\t%s", state))
-
+	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, lb.String(), rb.String()))
 	//Print Time
 	b.WriteString(getTimeString(remaining) + "\n")
 
 	//Print Phase
 	b.WriteString(getPhase(name) + "\n")
-
 	return b.String()
 }

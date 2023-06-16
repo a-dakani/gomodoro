@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/a-dakani/gomodoro/pkg/tomodoro"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
@@ -21,6 +22,7 @@ const (
 )
 
 type Model struct {
+	title          string
 	state          sessionState
 	sub            chan tomodoro.Message
 	ws             *tomodoro.WebSocketClient
@@ -33,6 +35,7 @@ type Model struct {
 	height         int
 	width          int
 	err            error
+	windowTooSmall bool
 }
 
 func New() *Model {
@@ -49,6 +52,7 @@ func New() *Model {
 	tl.Title = "Teams"
 
 	return &Model{
+		title:          "Gomodoro",
 		state:          noTeams,
 		sub:            make(chan tomodoro.Message, 100),
 		input:          ti,
@@ -57,9 +61,10 @@ func New() *Model {
 		timerRemaining: 0,
 		teamList:       tl,
 		help:           help.New(),
-		height:         initialWindowHeight,
-		width:          initialWindowWidth,
+		height:         minimalWindowHeight,
+		width:          minimalWindowWidth,
 		err:            nil,
+		windowTooSmall: false,
 	}
 }
 
@@ -80,11 +85,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 	// if msg type is tea.WindowSizeMsg, set the width and height of the model
 	if msg, ok := msg.(tea.WindowSizeMsg); ok {
-		m.height = msg.Height
-		m.width = msg.Width
-		m.help.Width = msg.Width
+		// if the window is too small, set the windowTooSmall flag to true
+		if msg.Width < minimalWindowWidth || msg.Height < minimalWindowHeight {
+			m.windowTooSmall = true
+		} else {
+			m.windowTooSmall = false
+		}
+		m.height = msg.Height - stylesHeight - 1
+		m.width = msg.Width - stylesWidth
+		m.help.Width = msg.Width - stylesWidth - 2
 	}
 
+	// if the window is too small, return the model and don't update
+	if m.windowTooSmall {
+		return m, nil
+	}
 	// else check the state of the model
 	switch m.state {
 	case noTeams:
@@ -104,7 +119,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			// reload the list of teams
 			m.loadTeams()
+			m.teamList.SetWidth(m.width)
+			m.teamList.SetHeight(m.height)
+			m.teamList.Help.Width = m.width - stylesWidth
 			m.state = showList
+			m.teamList, cmd = m.teamList.Update(msg)
 		case tea.KeyMsg:
 			switch {
 			case msg.Type == tea.KeyEnter:
@@ -115,7 +134,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if len(m.teamList.Items()) == 0 {
 					m.state = noTeams
 				} else {
+					m.teamList.SetWidth(m.width)
+					m.teamList.SetHeight(m.height)
+					m.teamList.Help.Width = m.width - stylesWidth
 					m.state = showList
+					m.teamList, cmd = m.teamList.Update(msg)
 				}
 			}
 		}
@@ -125,8 +148,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
 			switch {
-			case key.Matches(msg, Keymap.Back):
-				return m, nil
+			//case key.Matches(msg, Keymap.Back):
+			//	return m, nil
 			case msg.Type == tea.KeyEnter:
 				m.state = showTimer
 				return m, tea.Batch(m.joinTeam(), m.waitForActivity())
@@ -145,6 +168,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.teamList.SetWidth(m.width)
 		m.teamList.SetHeight(m.height)
+		m.teamList.Help.Width = m.width - stylesWidth
 		m.teamList, cmd = m.teamList.Update(msg)
 	case showTimer:
 		switch msg := msg.(type) {
@@ -200,7 +224,16 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) View() string {
+
 	var output string
+	output += m.renderTitle()
+
+	if m.windowTooSmall {
+		t := fmt.Sprintf("Window too small. Please resize.\n\nMinimum width: %d\nMinimum height: %d", minimalWindowWidth, minimalWindowHeight)
+		output += addHelp(t, helpStyle.Render("q/ctrl quit"), m.height)
+		return appStyle.Width(m.width).Height(m.height + 1).Render(output)
+	}
+
 	if m.err != nil {
 		output += m.err.Error() + "\n"
 	}
@@ -208,7 +241,7 @@ func (m *Model) View() string {
 	case showList:
 		output += m.teamList.View()
 	case showTimer:
-		t := timerView(m.teamList.SelectedItem().(Team), m.timerRemaining, m.timerName, string(m.timerState))
+		t := renderTimer(m.teamList.SelectedItem().(Team), m.timerRemaining, m.timerName, string(m.timerState))
 		output += addHelp(t, m.help.View(Keymap), m.height)
 	case showInput:
 		output += m.input.View()
@@ -218,7 +251,7 @@ func (m *Model) View() string {
 		output += "Something went wrong. Please try again."
 	}
 
-	return output
+	return appStyle.Width(m.width).Height(m.height).Render(output)
 }
 
 func (m *Model) loadTeams() {
@@ -314,4 +347,8 @@ func (m *Model) waitForActivity() tea.Cmd {
 	return func() tea.Msg {
 		return <-m.sub
 	}
+}
+
+func (m *Model) renderTitle() string {
+	return titleStyle.Width(m.width-2).Render(fmt.Sprintf("%s", m.title)) + "\n"
 }
