@@ -62,7 +62,7 @@ func addTeamToFile(team Team) error {
 		return err
 	}
 
-	// check if team already exists if it does replace it with the new one else append it
+	// check if team already exists if it does replace it with the newModel one else append it
 	for i, t := range fileTeams {
 		if t.Slug == team.Slug {
 			fileTeams[i] = team

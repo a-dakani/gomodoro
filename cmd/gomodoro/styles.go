@@ -41,8 +41,6 @@ var (
 			Background(lipgloss.Color(titleBackgroundColor)).
 			Foreground(lipgloss.Color(titleForegroundColor)).
 			Margin(0, 0, titlePaddingBottom, 0)
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(helpForegroundColor))
 	focusedStyle = lipgloss.NewStyle().
 			Foreground(lipgloss.Color(focusedForegroundColor))
 	pausedStyle = lipgloss.NewStyle().

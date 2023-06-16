@@ -1,3 +1,6 @@
+CURR_DIR:=$(shell pwd)
+BIN_DIR=/usr/local/bin
+
 # Go parameters
 GOCMD = go
 GOBUILD = $(GOCMD) build
@@ -20,3 +23,13 @@ build: clean
 clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_PATH)
+
+install: build
+	sudo cp $(BUILD_PATH)/$(EXECUTABLE) $(BIN_DIR)/$(EXECUTABLE)
+
+uninstall:
+	sudo rm -rf $(BIN_DIR)/$(EXECUTABLE)
+
+update:
+	git pull origin main
+	make install

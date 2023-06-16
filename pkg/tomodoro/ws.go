@@ -13,6 +13,7 @@ import (
 const pingPeriod = 10 * time.Second
 const tickPeriod = 1 * time.Second
 
+// WebSocketClient is the websocket Client
 type WebSocketClient struct {
 	configStr string
 	Slug      string
@@ -23,10 +24,11 @@ type WebSocketClient struct {
 	OutChan   chan Message
 }
 
+// NewWebSocketClient creates a new websocket Client
 func NewWebSocketClient(teamSlug string) *WebSocketClient {
 	wsc := WebSocketClient{}
 	wsc.Slug = teamSlug
-	wsc.configStr, _ = url.JoinPath(BaseWSURLV1, URLTeamSlug, teamSlug, "ws")
+	wsc.configStr, _ = url.JoinPath(baseWSURLV1, urlTeamSlug, teamSlug, "ws")
 
 	wsc.ctx, wsc.ctxCancel = context.WithCancel(context.Background())
 
@@ -35,12 +37,13 @@ func NewWebSocketClient(teamSlug string) *WebSocketClient {
 	return &wsc
 }
 
+// Start starts the websocket Client and listens for messages
 func (wsc *WebSocketClient) Start() {
 	go wsc.listen()
 	go wsc.ping()
 }
 
-func (wsc *WebSocketClient) Connect() *websocket.Conn {
+func (wsc *WebSocketClient) connect() *websocket.Conn {
 	wsc.mu.Lock()
 	defer wsc.mu.Unlock()
 	if wsc.conn != nil {
@@ -56,7 +59,7 @@ func (wsc *WebSocketClient) Connect() *websocket.Conn {
 			wsc.eventHandler(Connecting, nil)
 			ws, _, err := websocket.DefaultDialer.Dial(wsc.configStr, nil)
 			if err != nil {
-				fmt.Println(fmt.Sprintf("Cannot connect to websocket got error %s", err.Error()))
+				fmt.Printf("Cannot connect to websocket got error %s", err.Error())
 				continue
 			}
 			wsc.conn = ws
@@ -75,7 +78,7 @@ func (wsc *WebSocketClient) listen() {
 			return
 		case <-ticker.C:
 			for {
-				ws := wsc.Connect()
+				ws := wsc.connect()
 				if ws == nil {
 					return
 				}
@@ -86,7 +89,7 @@ func (wsc *WebSocketClient) listen() {
 				}
 
 				if err != nil {
-					fmt.Println(fmt.Sprintf("Cannot unmarshal websocket message got error %s", err.Error()))
+					fmt.Printf("Cannot unmarshal websocket message got error %s", err.Error())
 					break
 				}
 				// push messages to handler
@@ -102,7 +105,7 @@ func (wsc *WebSocketClient) ping() {
 	for {
 		select {
 		case <-ticker.C:
-			ws := wsc.Connect()
+			ws := wsc.connect()
 			if ws == nil {
 				continue
 			}
@@ -131,6 +134,7 @@ func (wsc *WebSocketClient) msgHandler(msg []byte) {
 	wsc.OutChan <- m
 }
 
+// Stop stops the websocket Client
 func (wsc *WebSocketClient) Stop() {
 	wsc.eventHandler(Terminating, nil)
 	wsc.ctxCancel()
@@ -143,12 +147,12 @@ func (wsc *WebSocketClient) closeWs() {
 	if wsc.conn != nil {
 		err := wsc.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		if err != nil {
-			fmt.Println(fmt.Sprintf("Cannot close websocket got error %s", err.Error()))
+			fmt.Printf("Cannot close websocket got error %s", err.Error())
 			return
 		}
 		err = wsc.conn.Close()
 		if err != nil {
-			fmt.Println(fmt.Sprintf("Cannot close websocket got error %s", err.Error()))
+			fmt.Printf("Cannot close websocket got error %s", err.Error())
 			return
 		}
 		wsc.conn = nil

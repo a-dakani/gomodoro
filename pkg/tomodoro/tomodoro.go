@@ -8,16 +8,18 @@ import (
 	"net/http"
 )
 
+// Client is the http Client
 type Client struct {
-	httpBaseUrl string
+	httpBaseURL string
 	httpClient  *http.Client
 }
 
+// NewClient creates a new Http Client
 func NewClient() *Client {
 	return &Client{
-		httpBaseUrl: BaseURLV1,
+		httpBaseURL: baseURLV1,
 		httpClient: &http.Client{
-			Timeout: HttpClientTimeout,
+			Timeout: httpClientTimeout,
 		},
 	}
 }
@@ -38,7 +40,7 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request, v interface
 	// This Endpoint returns a none 2xx status code, but it is not an error
 	if res.StatusCode != http.StatusGone {
 		if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
-			return NewRequestError(res)
+			return newRequestError(res)
 		}
 	}
 

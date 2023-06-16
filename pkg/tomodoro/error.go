@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-type ErrorResponse struct {
+type errorResponse struct {
 	Href  string `json:"href"`
 	Error struct {
 		Error   int    `json:"error"`
@@ -15,40 +15,38 @@ type ErrorResponse struct {
 	} `json:"error"`
 }
 
-type ErrType string
-
-type RequestError struct {
+type requestError struct {
 	StatusCode int
 	Href       string
 	Err        error
 }
 
-func NewRequestError(res *http.Response) error {
-	resBody := ErrorResponse{}
+func newRequestError(res *http.Response) error {
+	resBody := errorResponse{}
 
 	if err := json.NewDecoder(res.Body).Decode(&resBody); err != nil {
 		return fmt.Errorf("while calling %s got status: %d but failed to parse error response body", res.Request.URL, res.StatusCode)
 	}
 
-	return &RequestError{
+	return &requestError{
 		StatusCode: res.StatusCode,
 		Href:       res.Request.URL.String(),
 		Err:        errors.New(resBody.Error.Message),
 	}
 }
 
-func (r *RequestError) Error() string {
+func (r *requestError) Error() string {
 	return fmt.Sprintf("While calling %s got status: %d and error: %v", r.Href, r.StatusCode, r.Err)
 }
-func (r *RequestError) NotFound() bool {
+func (r *requestError) NotFound() bool {
 	return r.StatusCode == http.StatusNotFound
 }
-func (r *RequestError) BadRequest() bool {
+func (r *requestError) BadRequest() bool {
 	return r.StatusCode == http.StatusBadRequest
 }
-func (r *RequestError) Gone() bool {
+func (r *requestError) Gone() bool {
 	return r.StatusCode == http.StatusGone
 }
-func (r *RequestError) InternalServerError() bool {
+func (r *requestError) InternalServerError() bool {
 	return r.StatusCode == http.StatusInternalServerError
 }

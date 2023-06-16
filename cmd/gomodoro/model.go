@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// ErrorMsg is a wrapper for error to implement the tea.Msg interface
 type ErrorMsg error
 
 type sessionState int
@@ -21,7 +22,7 @@ const (
 	showInput
 )
 
-type Model struct {
+type model struct {
 	title          string
 	state          sessionState
 	sub            chan tomodoro.Message
@@ -38,7 +39,7 @@ type Model struct {
 	windowTooSmall bool
 }
 
-func New() *Model {
+func newModel() *model {
 	ti := textinput.New()
 	ti.CharLimit = 30
 	ti.Placeholder = "Team Slug"
@@ -51,7 +52,7 @@ func New() *Model {
 	tl := list.New([]list.Item{}, delegate, initialListHeight, initialListWidth)
 	tl.Title = "Teams"
 
-	return &Model{
+	return &model{
 		title:          "Gomodoro",
 		state:          noTeams,
 		sub:            make(chan tomodoro.Message, 100),
@@ -68,12 +69,12 @@ func New() *Model {
 	}
 }
 
-func (m *Model) Init() tea.Cmd {
+func (m *model) Init() tea.Cmd {
 	m.loadTeams()
 	return nil
 }
 
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
 
@@ -123,7 +124,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.teamList.SetHeight(m.height)
 			m.teamList.Help.Width = m.width - stylesWidth
 			m.state = showList
-			m.teamList, cmd = m.teamList.Update(msg)
+			m.teamList, _ = m.teamList.Update(msg)
 		case tea.KeyMsg:
 			switch {
 			case msg.Type == tea.KeyEnter:
@@ -138,7 +139,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.teamList.SetHeight(m.height)
 					m.teamList.Help.Width = m.width - stylesWidth
 					m.state = showList
-					m.teamList, cmd = m.teamList.Update(msg)
+					m.teamList, _ = m.teamList.Update(msg)
 				}
 			}
 		}
@@ -223,14 +224,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m *Model) View() string {
+func (m *model) View() string {
 
 	var output string
 	output += m.renderTitle()
 
 	if m.windowTooSmall {
 		t := fmt.Sprintf("Window too small. Please resize.\n\nMinimum width: %d\nMinimum height: %d", minimalWindowWidth, minimalWindowHeight)
-		output += addHelp(t, helpStyle.Render("q/ctrl quit"), m.height)
+		output += addHelp(t, "q/ctrl quit", m.height)
 		return appStyle.Width(m.width).Height(m.height + 1).Render(output)
 	}
 
@@ -254,7 +255,7 @@ func (m *Model) View() string {
 	return appStyle.Width(m.width).Height(m.height).Render(output)
 }
 
-func (m *Model) loadTeams() {
+func (m *model) loadTeams() {
 	var teams []Team
 	teams, err := readTeamsFile()
 	if err != nil {
@@ -272,7 +273,7 @@ func (m *Model) loadTeams() {
 	m.teamList.SetItems(items)
 }
 
-func (m *Model) addTeam() tea.Cmd {
+func (m *model) addTeam() tea.Cmd {
 	return func() tea.Msg {
 		team, err := getTeam(m.input.Value())
 		if err != nil {
@@ -283,7 +284,7 @@ func (m *Model) addTeam() tea.Cmd {
 	}
 }
 
-func (m *Model) startFocus() tea.Cmd {
+func (m *model) startFocus() tea.Cmd {
 	return func() tea.Msg {
 		err := startFocus(m.teamList.Items()[m.teamList.Index()].(Team))
 		if err != nil {
@@ -293,7 +294,7 @@ func (m *Model) startFocus() tea.Cmd {
 	}
 }
 
-func (m *Model) startPause() tea.Cmd {
+func (m *model) startPause() tea.Cmd {
 	return func() tea.Msg {
 		err := startPause(m.teamList.Items()[m.teamList.Index()].(Team))
 		if err != nil {
@@ -303,7 +304,7 @@ func (m *Model) startPause() tea.Cmd {
 	}
 }
 
-func (m *Model) stopTimer() tea.Cmd {
+func (m *model) stopTimer() tea.Cmd {
 	return func() tea.Msg {
 		err := stopTimer(m.teamList.Items()[m.teamList.Index()].(Team))
 		if err != nil {
@@ -313,23 +314,23 @@ func (m *Model) stopTimer() tea.Cmd {
 	}
 }
 
-func (m *Model) joinTeam() tea.Cmd {
+func (m *model) joinTeam() tea.Cmd {
 	return func() tea.Msg {
 		slug := m.teamList.SelectedItem().(Team).Slug
 		// if there is already a websocket connection, check if it is the same team
 		if m.ws != nil {
 			if m.ws.Slug == slug {
 				return nil
-			} else {
-				m.ws.Stop()
-				m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
-				m.ws.Start()
-				for {
-					for elem := range m.ws.OutChan {
-						m.sub <- elem
-					}
+			}
+			m.ws.Stop()
+			m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
+			m.ws.Start()
+			for {
+				for elem := range m.ws.OutChan {
+					m.sub <- elem
 				}
 			}
+
 		}
 		m.ws = tomodoro.NewWebSocketClient(m.teamList.SelectedItem().(Team).Slug)
 		m.ws.Start()
@@ -343,12 +344,12 @@ func (m *Model) joinTeam() tea.Cmd {
 	}
 }
 
-func (m *Model) waitForActivity() tea.Cmd {
+func (m *model) waitForActivity() tea.Cmd {
 	return func() tea.Msg {
 		return <-m.sub
 	}
 }
 
-func (m *Model) renderTitle() string {
-	return titleStyle.Width(m.width-2).Render(fmt.Sprintf("%s", m.title)) + "\n"
+func (m *model) renderTitle() string {
+	return titleStyle.Width(m.width-2).Render(m.title) + "\n"
 }

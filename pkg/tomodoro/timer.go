@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Timer is a timer received from the API
 type Timer struct {
 	Href  string `json:"href"`
 	Timer struct {
@@ -17,24 +18,26 @@ type Timer struct {
 	} `json:"timer"`
 }
 
-type StartTimerRequest struct {
+type startTimerRequest struct {
 	Duration int64  `json:"duration"`
 	Name     string `json:"name"`
 }
 
+// StopTimerResponse is the response received when stopping a timer
 type StopTimerResponse struct {
 	Href    string `json:"href"`
 	Type    string `json:"type"`
 	Message string `json:"Message"`
 }
 
+// StartTimer starts a timer
 func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64, name string) (*Timer, error) {
-	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug, URLTimerSlug, URLStartTimerSlug)
+	u, err := url.JoinPath(c.httpBaseURL, urlTeamSlug, teamSlug, urlTimerSlug, urlStartTimerSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	body := StartTimerRequest{
+	body := startTimerRequest{
 		Duration: duration,
 		Name:     name,
 	}
@@ -57,8 +60,9 @@ func (c *Client) StartTimer(ctx context.Context, teamSlug string, duration int64
 	return &res, nil
 }
 
+// StopTimer stops the timer
 func (c *Client) StopTimer(ctx context.Context, teamSlug string) (*StopTimerResponse, error) {
-	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug, URLTimerSlug)
+	u, err := url.JoinPath(c.httpBaseURL, urlTeamSlug, teamSlug, urlTimerSlug)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	m := New()
+	m := newModel()
 	program := tea.NewProgram(m, tea.WithAltScreen())
 
 	_, err := program.Run()

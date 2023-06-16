@@ -7,6 +7,7 @@ import (
 	"net/url"
 )
 
+// Team is a team received from the API
 type Team struct {
 	Name     string   `json:"name"`
 	Slug     string   `json:"slug"`
@@ -15,23 +16,26 @@ type Team struct {
 	Links    []Link   `json:"links"`
 }
 
-type CreateTeamRequest struct {
+type createTeamRequest struct {
 	Team string `json:"team"`
 }
 
+// CreateTeamResponse is the response received when creating a team
 type CreateTeamResponse struct {
 	Name string `json:"name"`
 	Slug string `json:"slug"`
 }
 
+// Link is a link in the response
 type Link struct {
 	Link string `json:"Link"`
 	Rel  string `json:"rel"`
 	Type string `json:"type"`
 }
 
+// GetTeam gets a team
 func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
-	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug, teamSlug)
+	u, err := url.JoinPath(c.httpBaseURL, urlTeamSlug, teamSlug)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +52,14 @@ func (c *Client) GetTeam(ctx context.Context, teamSlug string) (*Team, error) {
 	return &res, nil
 }
 
+// CreateTeam creates a team
 func (c *Client) CreateTeam(ctx context.Context, teamName string) (*CreateTeamResponse, error) {
-	u, err := url.JoinPath(c.httpBaseUrl, URLTeamSlug)
+	u, err := url.JoinPath(c.httpBaseURL, urlTeamSlug)
 	if err != nil {
 		return nil, err
 	}
 
-	body := CreateTeamRequest{
+	body := createTeamRequest{
 		Team: teamName,
 	}
 
