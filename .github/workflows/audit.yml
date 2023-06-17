@@ -29,12 +29,12 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.53
+          skip-cache: true
+          skip-build-cache: true
+          install-mode: "goinstall"
 
-      - name: Install staticcheck
-        run: go install honnef.co/go/tools/cmd/staticcheck@latest
-
-      - name: Run staticcheck
-        run: staticcheck ./...
+      - name: Staticcheck
+        uses: dominikh/staticcheck-action@v1.3.0
 
       - name: Build
         run: go build -v ./...
