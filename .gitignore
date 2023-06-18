@@ -10,7 +10,9 @@
 .idea
 TODOs.md
 build/
+docker/
 teams.json
+.env
 
 # Test binary, built with `go test -c`
 *.test
@@ -23,3 +25,4 @@ teams.json
 
 # Go workspace file
 go.work
+/docker/

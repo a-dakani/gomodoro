@@ -7,29 +7,53 @@ GOBUILD = $(GOCMD) build
 GOCLEAN = $(GOCMD) clean
 
 # Main package and executable name
-PACKAGE = ./cmd/gomodoro-cli
-EXECUTABLE = gomodoro
+PACKAGE_CLI = ./cmd/gomodoro-cli
+PACKAGE_API = ./cmd/gomodoro-api
+EXECUTABLE_CLI = gomodoro-cli
+EXECUTABLE_API = gomodoro-api
 BUILD_PATH = ./build
 
-# Run target
-run: clean build
-	$(BUILD_PATH)/$(EXECUTABLE)
+# Run CLI target
+run-cli: clean build-cli
+	$(BUILD_PATH)/$(EXECUTABLE_CLI)
 
-# Build target
-build: clean
-	$(GOBUILD) -o $(BUILD_PATH)/$(EXECUTABLE) $(PACKAGE)
+# Build CLI target
+build-cli: clean
+	$(GOBUILD) -o $(BUILD_PATH)/$(EXECUTABLE) $(PACKAGE_CLI)
+
+# Run CLI target with reflex to hot reload
+watch-api:
+	ulimit -n 1000
+	reflex -s -r '\.go$$' make run-api
+
+# Run API target
+run-api: clean build-api
+	$(BUILD_PATH)/$(EXECUTABLE_API)
+
+# Build API target
+build-api: clean
+	$(GOBUILD) -o $(BUILD_PATH)/$(EXECUTABLE) $(PACKAGE_API)
 
 # Clean target
 clean:
 	$(GOCLEAN)
 	rm -rf $(BUILD_PATH)
 
-install: build
-	sudo cp $(BUILD_PATH)/$(EXECUTABLE) $(BIN_DIR)/$(EXECUTABLE)
 
-uninstall:
-	sudo rm -rf $(BIN_DIR)/$(EXECUTABLE)
+# Install CLI target
+install: build-cli
+	sudo cp $(BUILD_PATH)/$(EXECUTABLE_CLI) $(BIN_DIR)/$(EXECUTABLE_CLI)
 
-update:
+# Uninstall CLI target
+uninstall-cli:
+	sudo rm -rf $(BIN_DIR)/$(EXECUTABLE_CLI)
+
+# Update CLI target
+update-cli:
 	git pull origin main
+	make uninstall-cli
 	make install
+
+
+
+
