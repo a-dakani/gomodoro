@@ -54,17 +54,18 @@ func getGomodoroByID(ctx *fiber.Ctx) error {
 
 func createGomodoro(ctx *fiber.Ctx) error {
 	name := ctx.Params("name")
+
 	gomodoro, err := model.CreateGomodoro(name)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error creating gomodoro" + err.Error(),
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "Error creating gomodoro " + err.Error(),
 		})
 	}
 
 	err = model.CreateDefaultTimer(gomodoro.ID)
 	if err != nil {
 		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error getting gomodoro " + err.Error(),
+			"message": "Error creating gomodoro timer " + err.Error(),
 		})
 	}
 
@@ -87,7 +88,7 @@ func deleteGomodoroByID(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.Status(fiber.StatusNoContent).JSON(fiber.Map{})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{})
 }
 
 func deleteGomodoroByName(ctx *fiber.Ctx) error {
@@ -99,7 +100,7 @@ func deleteGomodoroByName(ctx *fiber.Ctx) error {
 		})
 	}
 
-	return ctx.Status(fiber.StatusNoContent).JSON(fiber.Map{})
+	return ctx.Status(fiber.StatusOK).JSON(fiber.Map{})
 }
 
 func updateGomodoro(ctx *fiber.Ctx) error {
@@ -115,7 +116,7 @@ func updateGomodoro(ctx *fiber.Ctx) error {
 	gomodoro := new(model.Gomodoro)
 
 	if err := ctx.BodyParser(gomodoro); err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "Error parsing gomodoro" + err.Error(),
 		})
 	}

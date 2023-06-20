@@ -34,7 +34,7 @@ func GetGomodoroByID(id uint) (Gomodoro, error) {
 }
 
 func CreateGomodoro(name string) (Gomodoro, error) {
-	gomodoro := Gomodoro{
+	gomodoro := &Gomodoro{
 		Name: name,
 	}
 
@@ -43,7 +43,7 @@ func CreateGomodoro(name string) (Gomodoro, error) {
 		return Gomodoro{}, tx.Error
 	}
 
-	return gomodoro, nil
+	return *gomodoro, nil
 }
 
 func DeleteGomodoroByID(id uint) error {

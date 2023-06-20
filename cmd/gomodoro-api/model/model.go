@@ -27,11 +27,13 @@ const (
 )
 
 const (
-	Idle     TimerStatus = "idle"
-	Running  TimerStatus = "running"
-	Paused   TimerStatus = "paused"
-	Finished TimerStatus = "finished"
+	Idle    TimerStatus = "idle"
+	Running TimerStatus = "running"
+	Paused  TimerStatus = "paused"
 )
+
+// TODO change this to get timer with gomodoro instead of gomodoro with timer in the response
+// TODO Change the relation
 
 type Gomodoro struct {
 	ID          uint          `gorm:"primarykey"`
@@ -48,15 +50,13 @@ type Gomodoro struct {
 type Timer struct {
 	ID         uint          `gorm:"primarykey"`
 	GomodoroID uint          `json:"gomodoroID" gorm:"not null; unique"`
-	Gomodoro   Gomodoro      `gorm:"foreignKey:GomodoroID"`
+	Gomodoro   Gomodoro      `gorm:"foreignKey:GomodoroID;constraint:OnDelete:CASCADE"`
 	Type       TimerType     `json:"type" gorm:"not null"`
 	Status     TimerStatus   `json:"status" gorm:"not null; default:'idle'"`
 	Duration   time.Duration `json:"duration" gorm:"not null"`
 	Remaining  time.Duration `json:"remaining" gorm:"not null"`
 	Repetition int8          `json:"repetition" gorm:"not null; default:1"`
-	StartedAt  time.Time     `json:"startedAt"`
-	PausedAt   time.Time     `json:"pausedAt"`
-	FinishedAt time.Time     `json:"finishedAt"`
+	StartedAt  time.Time     `json:"startedAt" gorm:"default:null"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
