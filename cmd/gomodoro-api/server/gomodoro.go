@@ -24,7 +24,7 @@ func getGomodoroByName(ctx *fiber.Ctx) error {
 
 	gomodoro, err := model.GetGomodoroByName(name)
 	if err != nil {
-		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"message": "Error getting gomodoro " + err.Error(),
 		})
 	}

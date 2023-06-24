@@ -2,6 +2,8 @@ package server
 
 import (
 	"fmt"
+	"github.com/a-dakani/gomodoro/cmd/gomodoro-api/ws"
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -34,6 +36,8 @@ func SetupAndListen(host string, port int) error {
 	apiV1.Put("/g/:id/t/pause", pauseTimer)
 	apiV1.Put("/g/:id/t/resume", resumeTimer)
 	apiV1.Put("/g/:id/t/next", nextTimer)
+
+	apiV1.Get("/g/:id/ws", websocket.New(ws.Serve))
 
 	router.Use("/", func(ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusNotFound).JSON(fiber.Map{

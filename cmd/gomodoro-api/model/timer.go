@@ -14,7 +14,7 @@ func CreateTimer(gomodoroID uint, timerType TimerType, duration time.Duration, r
 		Repetition: repetition,
 	}
 
-	tx := DB.Create(timer)
+	tx := db.Create(timer)
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -25,7 +25,7 @@ func CreateTimer(gomodoroID uint, timerType TimerType, duration time.Duration, r
 func GetTimer(gomodoroID uint) (Timer, error) {
 	var timer Timer
 
-	tx := DB.Where("gomodoro_id = ?", gomodoroID).First(&timer)
+	tx := db.Where("gomodoro_id = ?", gomodoroID).First(&timer)
 	if tx.Error != nil {
 		return Timer{}, tx.Error
 	}
@@ -34,7 +34,7 @@ func GetTimer(gomodoroID uint) (Timer, error) {
 }
 
 func UpdateTimer(id uint, timer *Timer) error {
-	tx := DB.Model(&Timer{}).Where("id = ?", id).Updates(timer)
+	tx := db.Model(&Timer{}).Where("id = ?", id).Updates(timer)
 	if tx.Error != nil {
 		return tx.Error
 	}

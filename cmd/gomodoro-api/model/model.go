@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var DB *gorm.DB
+var db *gorm.DB
 
 type TimerType string
 type TimerStatus string
@@ -50,7 +50,6 @@ type Gomodoro struct {
 type Timer struct {
 	ID         uint          `gorm:"primarykey"`
 	GomodoroID uint          `json:"gomodoroID" gorm:"not null; unique"`
-	Gomodoro   Gomodoro      `gorm:"foreignKey:GomodoroID;constraint:OnDelete:CASCADE"`
 	Type       TimerType     `json:"type" gorm:"not null"`
 	Status     TimerStatus   `json:"status" gorm:"not null; default:'idle'"`
 	Duration   time.Duration `json:"duration" gorm:"not null"`
@@ -62,7 +61,7 @@ type Timer struct {
 }
 
 func ConnectDB(dsn string) error {
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	dbInstance, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	if err != nil {
 		log.Fatalf("Could not connect to database: %v", err)
@@ -71,7 +70,7 @@ func ConnectDB(dsn string) error {
 
 	log.Println("Connected to database")
 
-	db.Logger = logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
+	dbInstance.Logger = logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
 		SlowThreshold:             200 * time.Millisecond,
 		LogLevel:                  logger.Warn,
 		IgnoreRecordNotFoundError: true,
@@ -80,12 +79,12 @@ func ConnectDB(dsn string) error {
 
 	log.Println("Running migrations")
 
-	err = db.AutoMigrate(&Gomodoro{}, &Timer{})
+	err = dbInstance.AutoMigrate(&Gomodoro{}, &Timer{})
 	if err != nil {
 		return err
 	}
 
-	DB = db
+	db = dbInstance
 
 	return nil
 }

@@ -3,7 +3,7 @@ package model
 func GetAllGomodoros() ([]Gomodoro, error) {
 	var gomodoros []Gomodoro
 
-	tx := DB.Find(&gomodoros)
+	tx := db.Find(&gomodoros)
 	if tx.Error != nil {
 		return []Gomodoro{}, tx.Error
 	}
@@ -14,7 +14,7 @@ func GetAllGomodoros() ([]Gomodoro, error) {
 func GetGomodoroByName(name string) (Gomodoro, error) {
 	var gomodoro Gomodoro
 
-	tx := DB.Where("name = ?", name).First(&gomodoro)
+	tx := db.Where("name = ?", name).First(&gomodoro)
 	if tx.Error != nil {
 		return Gomodoro{}, tx.Error
 	}
@@ -25,7 +25,7 @@ func GetGomodoroByName(name string) (Gomodoro, error) {
 func GetGomodoroByID(id uint) (Gomodoro, error) {
 	var gomodoro Gomodoro
 
-	tx := DB.First(&gomodoro, id)
+	tx := db.First(&gomodoro, id)
 	if tx.Error != nil {
 		return Gomodoro{}, tx.Error
 	}
@@ -38,7 +38,7 @@ func CreateGomodoro(name string) (Gomodoro, error) {
 		Name: name,
 	}
 
-	tx := DB.Create(gomodoro)
+	tx := db.Create(gomodoro)
 	if tx.Error != nil {
 		return Gomodoro{}, tx.Error
 	}
@@ -47,7 +47,7 @@ func CreateGomodoro(name string) (Gomodoro, error) {
 }
 
 func DeleteGomodoroByID(id uint) error {
-	tx := DB.Delete(&Gomodoro{}, id)
+	tx := db.Delete(&Gomodoro{}, id)
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -56,7 +56,7 @@ func DeleteGomodoroByID(id uint) error {
 }
 
 func DeleteGomodoroByName(name string) error {
-	tx := DB.Where("name = ?", name).Delete(&Gomodoro{})
+	tx := db.Where("name = ?", name).Delete(&Gomodoro{})
 	if tx.Error != nil {
 		return tx.Error
 	}
@@ -65,7 +65,7 @@ func DeleteGomodoroByName(name string) error {
 }
 
 func UpdateGomodoro(id uint, gomodoro *Gomodoro) error {
-	tx := DB.Model(&Gomodoro{}).Where("id = ?", id).Updates(gomodoro)
+	tx := db.Model(&Gomodoro{}).Where("id = ?", id).Updates(gomodoro)
 	if tx.Error != nil {
 		return tx.Error
 	}

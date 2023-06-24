@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/a-dakani/gomodoro/cmd/gomodoro-api/model"
-	"github.com/a-dakani/gomodoro/cmd/gomodoro-api/server"
+	db "github.com/a-dakani/gomodoro/cmd/gomodoro-api/model"
+	srv "github.com/a-dakani/gomodoro/cmd/gomodoro-api/server"
+	ws "github.com/a-dakani/gomodoro/cmd/gomodoro-api/ws"
 	"github.com/joho/godotenv"
 	"log"
 	"os"
@@ -29,11 +30,16 @@ func main() {
 		log.Fatal("PORT is not set")
 	}
 
-	if err := model.ConnectDB(dsn); err != nil {
+	// Start the websocket loop
+	ws.Start()
+
+	// Connect to the DB
+	if err := db.ConnectDB(dsn); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := server.SetupAndListen(host, port); err != nil {
+	// Start serving the API
+	if err := srv.SetupAndListen(host, port); err != nil {
 		log.Fatal(err)
 	}
 }
